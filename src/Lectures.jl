@@ -1,5 +1,153 @@
 module Lectures
 
-# package code goes here
+import Base: zero
+
+export analyse, compute_totals, generate_report, main, get_total, get_scores
+
+zero(::String) = ""
+
+# TODO Make plots with lots of (differently named) exercises nicer
+# TODO Handle exercises with different maximal scores properly
+# TODO Figure out how to handle bonus points
+
+using Color
+using DataFrames
+using Gadfly
+using IniFile
+
+include("data.jl")
+include("load.jl")
+include("plot.jl")
+
+
+# Data analysis
+
+@doc doc"""Compute the total score for each student.""" ->
+function compute_totals(scores::DataFrame)
+    return by(scores, [:Matrikelnummer]) do df
+        DataFrame(total=sum(dropna(df[:Punkte])),
+                  handed_in=count(x -> x >= 0, df[:Punkte]))
+    end
+end
+
+
+@doc doc"""Analyse the raw data contained in `$dir/punkte.csv`.""" ->
+function analyse(dir::String)
+    @assert dir != ""
+    data = read_lecture_desc(dir)
+
+    load_maximum!(data)
+    load_stacked_data!(data)
+    load_exam_data!(data)
+
+    data.exercises.totals = compute_totals(data.exercises.scores)
+
+    plot_overview(data)
+    plot_totals(data)
+    scatter_plot_totals(data) # Scatter plot of student ids and totals
+
+    for i in 1:length(data.exams)
+        plot_exercise_exam_correlation(data, i)
+        #plot_correlations_by_assignment(data, i)
+    end
+
+    report_file = joinpath(data.output_directory, "Auswertung.md")
+    report_html = joinpath(data.output_directory, "Auswertung.html")
+    open(report_file, "w") do file
+        write(file, generate_report(data))
+    end
+    cmd = `pandoc --template $(Pkg.dir("Lectures") * "/templates/report.html")
+                  -V lang=de --from markdown --to html $report_file -o $report_html`
+    run(cmd)
+
+    return data
+end
+
+
+@doc doc"""Generate a report of the data.""" ->
+function generate_report(data::LectureData)
+    scores = data.exercises.scores
+    totals = data.exercises.totals
+    num_exercises = data.exercises.number_of_assignments
+    cor_id_total = cor(totals[:Matrikelnummer], totals[:total])
+    mean_handed_in = count(x -> x >= 0, scores[:Punkte])/num_exercises
+
+    exams = UTF8String["", ""]
+    for i in 1:length(data.exams)
+        exams[i] = """## Ergebnisse von Klausur $i
+        ![Vergleich der Ergebnisse von Klausur und Übungen](exam_exercise_correlation_$i.png)\\ ![Vergleich von Klausurergebnis und Anzahl der abgegebenen Übungen](exam_num_exercises_$i.png)\\"""
+#        ![Vergleich von Klausurergebnis mit den einzelnen Übungsblättern](cor_subtotals_$i.png)
+#        ![Vergleich von Klausurergebnis mit den einzelnen Übungsaufgaben](cor_scores_$i.png)"""
+    end
+
+    number_of_students = data.exercises.number_of_students
+    mean_handed_in = round(mean_handed_in, 1)
+    cor_id_total = round(cor_id_total, 2)
+
+    cor_totals_exam = UTF8String["", ""]
+    for i in 1:length(data.exams)
+        foo = join(totals, data.exams[i].totals, on=:Matrikelnummer, kind=:right)
+        bar = isna(foo[:total])
+        foo[bar, :total] = 0
+        corellation = cor(foo[:total], foo[:Σ])
+        correlation = round(corellation, 2)
+        cor_totals_exam[i] = """* Zwischen den erreichten Punkten in den Übungen und der $i. Klausur besteht eine Korrelation mit Korrelationskoeffizient $correlation.
+        * Es gaben insgesamt $(sum(bar)) Studenten an der $i. Klausur teilgenommen, aber nie Übungen abgegeben.  Ihre Matrikelnummern sind $(join(map(string, foo[bar, :Matrikelnummer]), ", "))."""
+    end
+
+    return """---
+lecture-name: $(data.name)
+term: $(data.term)
+language: de-DE
+...
+
+# Auswertung der Übungsergebnisse zur Vorlesung $(data.name) ($(data.term))
+## Histogramm der Übungspunkte
+![Histogramm der Übungspunkte](totals.png)\\
+
+
+## Übersicht über die einzelnen Aufgaben
+![Überblick über die einzelnen Aufgaben](overview.png)\\
+
+
+## Auswertung der Gesamtpunktzahl
+![Vergleich von Matrikelnummern und der Übungspunktzahl](scatter_totals.png)\\ ![Vergleich der Anzahl abgegebener Aufgaben und der Übungspunktzahl](scatter_number.png)\\
+
+
+$(exams[1])
+
+$(exams[2])
+
+## Sonstige Daten
+* Von den $number_of_students Teilnehmern wurden durchschnittlich
+  $mean_handed_in der insgesamt $num_exercises Aufgaben abgegeben.
+* Der Pearson-Korrelationskoeffizient von Matrikelnummern und erreichten
+  Gesamtpunktzahlen ist $cor_id_total.
+$(cor_totals_exam[1])
+$(cor_totals_exam[2])
+"""
+end
+
+
+function main(project::String)
+  project_path = joinpath(ENV["HOME"], "work", project)
+  output_path = joinpath(project_path, "output")
+  if !isdir(output_path)
+    mkdir(output_path, 0o755)
+  end
+  analyse(project_path)
+end
+
+
+function get_total(data::LectureData, student::Int)
+    totals = data.exercises.totals
+    totals[totals[:Matrikelnummer] .== student, :total]
+end
+
+
+function get_scores(data::LectureData, student::Int)
+    scores = data.exercises.scores
+    scores[scores[:Matrikelnummer] .== student, [:Blatt, :Aufgabe, :Punkte]]
+end
 
 end # module
