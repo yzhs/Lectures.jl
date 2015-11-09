@@ -4,7 +4,7 @@ height = 800px
 
 set_default_plot_size(width, height)
 
-# Color gradients
+# Colors gradients
 totals_gradient = Scale.lab_gradient(map(color, ["lightgrey", "red", "orange", "yellow", "green", "blue"])...)
 marks_gradient(p) = totals_gradient(1-p)
 
@@ -57,7 +57,7 @@ function plot_totals(data::LectureData)
              Guide.ylabel("Häufigkeit", orientation=:vertical),
              Guide.xticks(ticks=[0:4:maximum(totals[:total])]),
              Scale.ContinuousColorScale(totals_gradient),
-             Theme(background_color=color("white")))
+             Theme(background_color=colorant"white"))
 
     save_plot(data.output_directory, "totals", width, 200px, p)
 end
@@ -100,7 +100,7 @@ function plot_overview(data::LectureData)
              Guide.colorkey("Punkte"),
              Scale.y_continuous(minvalue=0, maxvalue=num_students),
              Scale.ContinuousColorScale(color_chooser(totals_gradient)),
-             Theme(background_color=color("white")))
+             Theme(background_color=colorant"white"))
 
     save_plot(data.output_directory, "overview", width, height, p)
 end
@@ -234,7 +234,7 @@ function plot_correlations_by_assignment(data::LectureData, i::Int)
              Guide.ylabel("Klausurpunkte"),
              Guide.colorkey("Kor."),
              Scale.ContinuousColorScale(totals_gradient),
-             Theme(background_color = color("white")))
+             Theme(background_color = colorant"white"))
 
     outdir = data.output_directory
     save_plot(outdir, "cor_subtotals_" * string(i), width, 350px, p)
@@ -251,7 +251,7 @@ function plot_correlations_by_assignment(data::LectureData, i::Int)
              Guide.ylabel("Klausurpunkte bzw. Übungsblatt"),
              Guide.colorkey("Kor."),
              Scale.ContinuousColorScale(totals_gradient),
-             Theme(background_color = color("white")))
+             Theme(background_color = colorant"white"))
 
     save_plot(outdir, "cor_scores_" * string(i), width, 1100px, p)
 end

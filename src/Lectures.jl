@@ -10,7 +10,7 @@ zero(::String) = ""
 # TODO Handle exercises with different maximal scores properly
 # TODO Figure out how to handle bonus points
 
-using Color
+using Colors
 using DataFrames
 using Gadfly
 using IniFile
