@@ -1,6 +1,8 @@
 # Read ini-style lecture description
 using IniFile
 
+const MAX_GROUP_SIZE = 16
+
 const MAXIMUM_FILE = "Maximal.csv"
 const SCORES_FILE = "punkte.csv"
 const SCORES_STACKED = "punkte_stacked.csv"
@@ -13,15 +15,15 @@ in which the lecture takes place.
 
 #### Arguments
 
-* `dir::String`: The directory of the lecture.
+* `dir::AbstractString`: The directory of the lecture.
 
 #### Returns
 
 * `data::LectureData`: The LectureData struct populated with the information
 from the ini file.
 """ ->
-function read_lecture_desc(dir::String)
-    new_scores = Scores(-1, -1, -1, DataFrame(), -1, DataFrame(), DataFrame(), None)
+function read_lecture_desc(dir::AbstractString)
+    new_scores = Scores(-1, -1, -1, DataFrame(), -1, DataFrame(), DataFrame(), Union{})
 
     path = joinpath(dir, "lecture.ini")
     if !isfile(path)
@@ -45,14 +47,69 @@ function read_lecture_desc(dir::String)
                 names, new_scores, [])
 end
 
+
+@doc doc"Read the individual score files and create the stacked file." ->
+function stack_data!(data::LectureData)
+    # TODO check whether the stacked file is up to date
+    maximum_scores = data.exercises.maximum_scores
+    files = map((x,y) -> string(x, ".", y, ".csv"), maximum_scores[:Blatt], maximum_scores[:Aufgabe])
+
+    sheets = Int[]
+    exercises = UTF8String[]
+    scores = Float64[]
+    students = Int[]
+    for (sheet,exercise) in zip(maximum_scores[:Blatt], maximum_scores[:Aufgabe])
+        file = joinpath(data.scores_directory, string(sheet, ".", exercise, ".csv"))
+        try
+            csv = readcsv(file)
+            for i in 1:size(csv,1)
+                line = csv[i,:]
+                if line[1] == "Punkte"
+                    continue
+                end
+                for id in line[2:end]
+                    if id == ""
+                        break
+                    end
+                    push!(sheets, sheet)
+                    push!(exercises, exercise)
+                    push!(scores, line[1])
+                    push!(students, id)
+                end
+            end
+        catch err
+            info("Could not read scores for sheet $sheet, exercise $exercise.")
+            warn(err)
+            break
+        end
+    end
+    if length(sheets) != 0
+        info("Writing stacked data to disk")
+        println(size(sheets))
+        println(size(exercises))
+        println(size(students))
+        println(size(scores))
+        df = DataFrame(Blatt=sheets, Aufgabe=exercises, Matrikelnummer=students, Punkte=scores)
+
+        info("foo")
+        stacked_file = joinpath(data.scores_directory, SCORES_STACKED)
+        writetable(stacked_file, df)
+    else
+        info("Using existsing stacked data file.")
+    end
+end
+
+
+@doc doc"Load the maximum scores from disk." ->
 function load_maximum!(data::LectureData)
     path = joinpath(data.scores_directory, MAXIMUM_FILE)
     if !isfile(path)
         info("Could not find file with the maximum possible scores")
-        return None
+        return Union{}
     end
+    types = [Int, UTF8String, Int, Int] # Make sure the exercise name is read as a string
     ex = data.exercises
-    ex.maximum_scores = readtable(path)
+    ex.maximum_scores = readtable(path, eltypes=types)
 
     # FIXME This assumes that the columns in Maximal.csv are sheet, exercise,
     # followed by the maximum score.
@@ -62,9 +119,8 @@ function load_maximum!(data::LectureData)
     return data
 end
 
-@doc doc"""
-Load raw scores.
-""" ->
+
+@doc doc"Load raw scores." ->
 function load_data!(data::LectureData)
     dir = data.scores_directory
 
@@ -109,14 +165,16 @@ function load_stacked_data!(data::LectureData)
 end
 
 
-@doc doc"""Read all the data from exams 1 and 2 (if it is available)""" ->
+@doc doc"Read all the data from exams 1 and 2 (if it is available)" ->
 function load_exam_data!(data::LectureData)
     dir = data.scores_directory
 
     for i in [1,2]
+        # TODO try to load the stacked variant first
         scores_file = joinpath(dir, EXAM * string(i) * ".csv")
         maximum_file = joinpath(dir, EXAM * string(i) * "_maximal.csv")
-        if isfile(scores_file)
+        if isfile(maximum_file)
+            info("Reading data for exam $i")
             # Types: Given name, surname, course of studies, student id, scores
             # per assignment, total score, grade
             types = [UTF8String, UTF8String, UTF8String, Int]
@@ -148,7 +206,7 @@ function load_exam_data!(data::LectureData)
             grade_minimums = if isfile(grade_minimums_file)
                 readtable(grade_minimums_file)
             else
-                None
+                Union{}
             end
 
             foo = Scores(number_of_assignments, perfect_score, bonus_points,

@@ -1,11 +1,12 @@
 # Plot size
-width = 1895px
+width = 1890px
 height = 800px
 
 set_default_plot_size(width, height)
 
 # Colors gradients
-totals_gradient = Scale.lab_gradient(map(color, ["lightgrey", "red", "orange", "yellow", "green", "blue"])...)
+totals_gradient = Scale.lab_gradient(map(x -> parse(Colorant, x),
+                                         ["lightgrey", "red", "orange", "yellow", "green", "blue"])...)
 marks_gradient(p) = totals_gradient(1-p)
 
 
@@ -23,8 +24,8 @@ Save a plot to disk as a PNG file.
 
 #### Arguments
 
-* `dir::String`: The directory in which the generated image is stored.
-* `filename::String`: The file name of the image.
+* `dir::AbstractString`: The directory in which the generated image is stored.
+* `filename::AbstractString`: The file name of the image.
 * `width`: How wide the plot is supposed to be (in cm, pixels, etc.).
 * `height`: How high the plot is supposed to be (in cm, pixels, etc.).
 * `plot`: The plot to be stored.
@@ -34,7 +35,7 @@ Save a plot to disk as a PNG file.
     save_plot("/tmp", "image", 800px, 600px, Gadfly.plot(...))
 
 """ ->
-function save_plot(dir::String, filename::String, width, height, plot)
+function save_plot(dir::AbstractString, filename::AbstractString, width, height, plot)
     draw(PNG(joinpath(dir, filename * ".png"), width, height), plot)
 end
 
@@ -46,20 +47,28 @@ function plot_totals(data::LectureData)
     perfect_score = data.exercises.perfect_score
     totals = data.exercises.totals
 
-    count_totals = by(totals, :total, df -> DataFrame(count = nrow(df)))
+    #count_totals = by(totals, :total, df -> DataFrame(count = nrow(df)))
 
     p = plot(totals, x=:total, color=:Matrikelnummer,
              xintercept=perfect_score/100*[30, 40, 50],
-             Geom.vline(color="red"),
+             Geom.vline(color=colorant"red") ,
              Geom.histogram,
              Guide.colorkey("Matnr."),
              Guide.xlabel("Gesamtpunktzahl"),
              Guide.ylabel("Häufigkeit", orientation=:vertical),
-             Guide.xticks(ticks=[0:4:maximum(totals[:total])]),
+             Guide.xticks(ticks=[0:8:maximum(totals[:total])]),
              Scale.ContinuousColorScale(totals_gradient),
              Theme(background_color=colorant"white"))
 
     save_plot(data.output_directory, "totals", width, 200px, p)
+end
+
+function relative_score(scores, maxs)
+    result = copy(scores)
+    result[maxs .!= 0] ./= maxs[maxs .!= 0]
+    result[maxs .== 0] ./= abs(result[maxs .== 0])
+    result[result .< 0] = -0.75
+    result
 end
 
 
@@ -87,11 +96,24 @@ function plot_overview(data::LectureData)
             DataFrame(Punkte=na_score, count=num_students-sum(df[:count]))
         end
         append!(counted_scores, count_hand_ins)
-        sort!(counted_scores, cols=[:Blatt, :Aufgabe, :Punkte])
     end
 
+    # TODO handle lecture with just one maximum score for every exercise
+    foo = if :Fach in names(maximum_scores)
+        rename(maximum_scores, :Fach, :Maximum)
+    elseif :Punkte in names(maximum_scores)
+        rename(maximum_scores, :Punkte, :Maximum)
+    else
+        error("Could not read maximum scores")
+    end
+    with_max = join(counted_scores, foo, on = [:Blatt, :Aufgabe])
+    weighted = by(with_max, [:Blatt, :Aufgabe, :count, :Punkte]) do df
+        DataFrame(weighted=relative_score(df[:Punkte], df[:Maximum]))
+    end
+    sort!(weighted, cols=[:Blatt, :Aufgabe, :Punkte])
+
     # Create a stacked bar chart.
-    p = plot(counted_scores, xgroup=:Blatt, x=:Aufgabe, y=:count, color=:Punkte,
+    p = plot(weighted, xgroup=:Blatt, x=:Aufgabe, y=:count, color=:weighted,
              Geom.subplot_grid(free_x_axis=true,
                                Geom.bar(position=:stack),
                                Guide.yticks(ticks=collect(0:10:num_students))),
@@ -106,11 +128,11 @@ function plot_overview(data::LectureData)
 end
 
 
-@doc doc"""
-Plot the total scores obtained in the exercises against the student id and the
-number of exercises handed in, respectively.
-""" ->
-function scatter_plot_totals(data::LectureData)
+#@doc doc"""
+#Plot the total scores obtained in the exercises against the student id and the
+#number of exercises handed in, respectively.
+#""" ->
+@debug function scatter_plot_totals(data::LectureData)
     totals = data.exercises.totals
     perfect_score = data.exercises.perfect_score
     number_of_assignments = data.exercises.number_of_assignments
@@ -122,7 +144,7 @@ function scatter_plot_totals(data::LectureData)
              Guide.yticks(ticks=map(round, linspace(0, perfect_score, 10))),
              Scale.ContinuousColorScale(totals_gradient,
                                         minvalue = 0,
-                                        maxvalue = number_of_assignments)
+                                        maxvalue = 4+number_of_assignments)
              )
 
     save_plot(data.output_directory, "scatter_totals", 800px, 600px, p)
@@ -142,6 +164,11 @@ function make_ticks(from, to, num_steps=8)
     map(round, linspace(from, to, num_steps))
 end
 
+function zero(x::AbstractString)
+    ""
+end
+
+
 @doc doc"""
 Create scatter plots comparing the totals score in a given exam with the
 exercise scores/number of exercises handed in.
@@ -159,7 +186,7 @@ function plot_exercise_exam_correlation(data::LectureData, i::Int)
     end
 
     grade_mins = data.exams[i].grade_minimums
-    xintercept = if grade_mins != None
+    xintercept = if grade_mins != Union{}
         grade_mins = grade_mins[grade_mins[:Note] .== round(grade_mins[:Note]), :]
         grade_mins[:Punkte] - 0.25
     else
@@ -171,7 +198,7 @@ function plot_exercise_exam_correlation(data::LectureData, i::Int)
     marks_scale = Scale.ContinuousColorScale(marks_gradient)
 
     p = plot(foo, x=:Σ, y=:total, color=:Note, Geom.point,
-             label=:Name, Geom.label,
+             #label=:Name, Geom.label,
              Guide.xlabel("Punkte in der Klausur"),
              Guide.ylabel("Punkte in den Übungen"),
              Guide.colorkey("Note"),

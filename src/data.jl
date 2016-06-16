@@ -18,14 +18,14 @@ end
 
 
 type LectureData
-    name :: String
-    short_name :: String # Abbreviated name
-    term :: String # the term in which the lecture takes place
+    name :: AbstractString
+    short_name :: AbstractString # Abbreviated name
+    term :: AbstractString # the term in which the lecture takes place
 
     # Paths
-    directory :: String
-    scores_directory :: String
-    output_directory :: String
+    directory :: AbstractString
+    scores_directory :: AbstractString
+    output_directory :: AbstractString
 
     # Table containing students' names, ids and possibly their course of study
     students #:: DataFrame
