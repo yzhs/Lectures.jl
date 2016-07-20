@@ -58,7 +58,7 @@ function plot_totals(data::LectureData)
              Guide.colorkey("Matnr."),
              Guide.xlabel("Gesamtpunktzahl"),
              Guide.ylabel("Häufigkeit", orientation=:vertical),
-             Guide.xticks(ticks=[0:8:maximum(totals[:total])]),
+             Guide.xticks(ticks=collect(0:8:maximum(totals[:total]))),
              Scale.ContinuousColorScale(totals_gradient),
              Theme(background_color=colorant"white"))
 
