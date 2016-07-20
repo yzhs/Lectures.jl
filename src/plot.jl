@@ -44,6 +44,7 @@ end
 Compute totals for all the students and plot a histogram.
 """
 function plot_totals(data::LectureData)
+    info("Plotting totals...")
     perfect_score = data.exercises.perfect_score
     totals = data.exercises.totals
 
@@ -77,6 +78,7 @@ Figure out and plot how often every possible score occurred for each of the
 assignments.
 """
 function plot_overview(data::LectureData)
+    info("Plotting overview")
     scores = data.exercises.scores
     num_students = data.exercises.number_of_students
     maximum_scores = data.exercises.maximum_scores
@@ -133,6 +135,7 @@ end
 #number of exercises handed in, respectively.
 #"""
 @debug function scatter_plot_totals(data::LectureData)
+    info("Creating scatter plots for exercises")
     totals = data.exercises.totals
     perfect_score = data.exercises.perfect_score
     number_of_assignments = data.exercises.number_of_assignments
@@ -174,6 +177,7 @@ Create scatter plots comparing the totals score in a given exam with the
 exercise scores/number of exercises handed in.
 """
 function plot_exercise_exam_correlation(data::LectureData, i::Int)
+    info("Creating scatter plots for exams")
     perfect_score = data.exercises.perfect_score
     exam_perfect_score = data.exams[i].perfect_score
     totals = data.exercises.totals
@@ -227,6 +231,7 @@ Generate grids of scatter plots of exam scores compared to individual exercise
 scores or per-sheet totals of the exercises.
 """
 function plot_correlations_by_assignment(data::LectureData, i::Int)
+    info("Plot correlation between exam and exercise scores per sheet")
     scores = data.exercises.scores
     totals = data.exams[i].totals
     foo = join(data.exercises.scores, totals, on=:Matrikelnummer, kind=:right)
