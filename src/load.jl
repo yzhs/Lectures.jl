@@ -85,13 +85,8 @@ function stack_data!(data::LectureData)
     end
     if length(sheets) != 0
         info("Writing stacked data to disk")
-        println(size(sheets))
-        println(size(exercises))
-        println(size(students))
-        println(size(scores))
         df = DataFrame(Blatt=sheets, Aufgabe=exercises, Matrikelnummer=students, Punkte=scores)
 
-        info("foo")
         stacked_file = joinpath(data.scores_directory, SCORES_STACKED)
         writetable(stacked_file, df)
     else
