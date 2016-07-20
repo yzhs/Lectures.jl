@@ -10,16 +10,16 @@ totals_gradient = Scale.lab_gradient(map(x -> parse(Colorant, x),
 marks_gradient(p) = totals_gradient(1-p)
 
 
-@doc doc"""
+"""
 Create a function which maps a number from [0,1] to a color from the given
 gradient.
-""" ->
+"""
 function color_chooser(gradient)
     return p -> gradient(if p < 1/3; 0.0; else 3*p/2-1/2; end)
 end
 
 
-@doc doc"""
+"""
 Save a plot to disk as a PNG file.
 
 #### Arguments
@@ -34,15 +34,15 @@ Save a plot to disk as a PNG file.
 
     save_plot("/tmp", "image", 800px, 600px, Gadfly.plot(...))
 
-""" ->
+"""
 function save_plot(dir::AbstractString, filename::AbstractString, width, height, plot)
     draw(PNG(joinpath(dir, filename * ".png"), width, height), plot)
 end
 
 
-@doc doc"""
+"""
 Compute totals for all the students and plot a histogram.
-""" ->
+"""
 function plot_totals(data::LectureData)
     perfect_score = data.exercises.perfect_score
     totals = data.exercises.totals
@@ -72,10 +72,10 @@ function relative_score(scores, maxs)
 end
 
 
-@doc doc"""
+"""
 Figure out and plot how often every possible score occurred for each of the
 assignments.
-""" ->
+"""
 function plot_overview(data::LectureData)
     scores = data.exercises.scores
     num_students = data.exercises.number_of_students
@@ -128,10 +128,10 @@ function plot_overview(data::LectureData)
 end
 
 
-#@doc doc"""
+#"""
 #Plot the total scores obtained in the exercises against the student id and the
 #number of exercises handed in, respectively.
-#""" ->
+#"""
 @debug function scatter_plot_totals(data::LectureData)
     totals = data.exercises.totals
     perfect_score = data.exercises.perfect_score
@@ -169,10 +169,10 @@ function zero(x::AbstractString)
 end
 
 
-@doc doc"""
+"""
 Create scatter plots comparing the totals score in a given exam with the
 exercise scores/number of exercises handed in.
-""" ->
+"""
 function plot_exercise_exam_correlation(data::LectureData, i::Int)
     perfect_score = data.exercises.perfect_score
     exam_perfect_score = data.exams[i].perfect_score
@@ -222,10 +222,10 @@ function plot_exercise_exam_correlation(data::LectureData, i::Int)
 end
 
 
-@doc doc"""
+"""
 Generate grids of scatter plots of exam scores compared to individual exercise
 scores or per-sheet totals of the exercises.
-""" ->
+"""
 function plot_correlations_by_assignment(data::LectureData, i::Int)
     scores = data.exercises.scores
     totals = data.exams[i].totals

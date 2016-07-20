@@ -9,7 +9,7 @@ const SCORES_STACKED = "punkte_stacked.csv"
 const NAMES_FILE = "Namen.csv"
 const EXAM = "klausur"
 
-@doc doc"""
+"""
 Read the lecture description which includes the name, a short name and the term
 in which the lecture takes place.
 
@@ -21,7 +21,7 @@ in which the lecture takes place.
 
 * `data::LectureData`: The LectureData struct populated with the information
 from the ini file.
-""" ->
+"""
 function read_lecture_desc(dir::AbstractString)
     new_scores = Scores(-1, -1, -1, DataFrame(), -1, DataFrame(), DataFrame(), Union{})
 
@@ -48,7 +48,7 @@ function read_lecture_desc(dir::AbstractString)
 end
 
 
-@doc doc"Read the individual score files and create the stacked file." ->
+"Read the individual score files and create the stacked file."
 function stack_data!(data::LectureData)
     # TODO check whether the stacked file is up to date
     maximum_scores = data.exercises.maximum_scores
@@ -100,7 +100,7 @@ function stack_data!(data::LectureData)
 end
 
 
-@doc doc"Load the maximum scores from disk." ->
+"Load the maximum scores from disk."
 function load_maximum!(data::LectureData)
     path = joinpath(data.scores_directory, MAXIMUM_FILE)
     if !isfile(path)
@@ -120,7 +120,7 @@ function load_maximum!(data::LectureData)
 end
 
 
-@doc doc"Load raw scores." ->
+"Load raw scores."
 function load_data!(data::LectureData)
     dir = data.scores_directory
 
@@ -146,11 +146,11 @@ function load_data!(data::LectureData)
 end
 
 
-@doc doc"""
+"""
 Read exercise scores from `\$dir/punkte_stacked.csv`.  The table has a column
 for the sheet and exercise numbers, the student id and the number of points
 obtained by that student for the given sheet and exercise number.
-""" ->
+"""
 function load_stacked_data!(data::LectureData)
     path = joinpath(data.scores_directory, SCORES_STACKED)
 
@@ -165,7 +165,7 @@ function load_stacked_data!(data::LectureData)
 end
 
 
-@doc doc"Read all the data from exams 1 and 2 (if it is available)" ->
+"Read all the data from exams 1 and 2 (if it is available)"
 function load_exam_data!(data::LectureData)
     dir = data.scores_directory
 
