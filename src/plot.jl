@@ -49,11 +49,12 @@ function plot_totals(data::LectureData)
     totals = data.exercises.totals
 
     #count_totals = by(totals, :total, df -> DataFrame(count = nrow(df)))
+    bins = data.exercises.number_of_assignments
 
     p = plot(totals, x=:total, color=:Matrikelnummer,
              xintercept=perfect_score/100*[30, 40, 50],
              Geom.vline(color=colorant"red") ,
-             Geom.histogram,
+             Geom.histogram(bincount=bins),
              Guide.colorkey("Matnr."),
              Guide.xlabel("Gesamtpunktzahl"),
              Guide.ylabel("Häufigkeit", orientation=:vertical),
